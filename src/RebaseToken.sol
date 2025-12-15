@@ -80,13 +80,13 @@ contract RebaseToken is ERC20, Ownable, AccessControl {
      * @param _to the user to mint the tokens to
      * @param _amount the amount of tokens to mint
      */
-    function mint(address _to, uint256 _amount) external onlyRole(MINT_AND_BURN_ROLE) {
+    function mint(address _to, uint256 _amount, uint256 _userInterestRate) external onlyRole(MINT_AND_BURN_ROLE) {
         // Accrued interest basically means interest that has been earned but not yet paid out
         // So when a user mints new tokens, we need to calculate the interest they have accrued so far and mint that interest to them before minting the new tokens they requested
         _mintAccruedInterest(_to);
 
         // We making sure to set the user's interest rate to the current global interest rate at the time of their minting that's why we have to payout the accrued interest first
-        userInterestRate[_to] = interestRate;
+        userInterestRate[_to] = _userInterestRate;
         _mint(_to, _amount);
     }
 
