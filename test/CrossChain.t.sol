@@ -21,7 +21,7 @@ contract CrossChainTest is Test {
     address joshua = makeAddr("joshua");
     uint256 sepoliaEthFork;
     uint256 arbSepoliaFork;
-
+    uint256 SEND_VALUE = 1e5;
     CCIPLocalSimulatorFork ccipLocalSimulatorFork;
 
     RebaseToken sepoliaEthToken;
@@ -84,6 +84,7 @@ contract CrossChainTest is Test {
         TokenAdminRegistry(arbSepoliaNetworkDetails.tokenAdminRegistryAddress).setPool(
             address(arbSepoliaToken), address(arbSepoliaPool)
         );
+        vm.stopPrank();
         configureTokenPool(
             sepoliaEthFork,
             address(sepoliaEthPool),
@@ -94,11 +95,10 @@ contract CrossChainTest is Test {
         configureTokenPool(
             arbSepoliaFork,
             address(arbSepoliaPool),
-            arbSepoliaNetworkDetails.chainSelector,
+            sepoliaNetworkDetails.chainSelector,
             address(sepoliaEthPool),
             address(sepoliaEthToken)
         );
-        vm.stopPrank();
     }
 
     function configureTokenPool(
@@ -110,14 +110,12 @@ contract CrossChainTest is Test {
     ) public {
         vm.selectFork(fork);
         vm.prank(joshua);
-        bytes[] memory remotePoolAddresses = new bytes[](1);
-        remotePoolAddresses[0] = abi.encode(remotePool);
         TokenPool.ChainUpdate[] memory chainsToAdd = new TokenPool.ChainUpdate[](1);
         chainsToAdd[0] = TokenPool.ChainUpdate({
             remoteChainSelector: remoteChainSelector,
             allowed: true,
-            remotePoolAddress: abi.encode(remotePoolAddresses),
-            remoteTokenAddress: abi.encode(remoteTokenAddress),
+            remotePoolAddress: abi.encode(remotePool), // encode single address
+            remoteTokenAddress: abi.encode(remoteTokenAddress), // encode single address
             outboundRateLimiterConfig: RateLimiter.Config({isEnabled: false, capacity: 0, rate: 0}),
             inboundRateLimiterConfig: RateLimiter.Config({isEnabled: false, capacity: 0, rate: 0})
         });
@@ -141,12 +139,12 @@ contract CrossChainTest is Test {
             data: "",
             tokenAmounts: tokenAmounts,
             feeToken: localNetworkDetails.linkAddress,
-            extraArgs: Client._argsToBytes(Client.EVMExtraArgsV1({gasLimit: 0}))
+            extraArgs: Client._argsToBytes(Client.EVMExtraArgsV1({gasLimit: 900_000}))
         });
 
         uint256 fee =
             IRouterClient(localNetworkDetails.routerAddress).getFee(remoteNetworkDetails.chainSelector, message);
-        ccipLocalSimulatorFork.requestLinkFromFaucet(joshua, fee);
+        ccipLocalSimulatorFork.requestLinkFromFaucet(joshua, 10 ether);
         vm.prank(joshua);
         IERC20(localNetworkDetails.linkAddress).approve(localNetworkDetails.routerAddress, fee);
         vm.prank(joshua);
@@ -159,12 +157,28 @@ contract CrossChainTest is Test {
         uint256 localUserInterestRate = localToken.getUserInterestRate(joshua);
 
         vm.selectFork(remoteFork);
-        vm.warp(block.timestamp + 20 minutes);
         uint256 remoteBalanceBefore = remoteToken.balanceOf(joshua);
         ccipLocalSimulatorFork.switchChainAndRouteMessage(remoteFork);
         uint256 remoteBalanceAfter = remoteToken.balanceOf(joshua);
         assertEq(remoteBalanceAfter, remoteBalanceBefore + amountToBridge);
         uint256 remoteUserInterestRate = remoteToken.getUserInterestRate(joshua);
         assertEq(remoteUserInterestRate, localUserInterestRate);
+    }
+
+    function testBridgeAllTokens() public {
+        vm.selectFork(sepoliaEthFork);
+        vm.deal(joshua, SEND_VALUE);
+        vm.prank(joshua);
+        Vault(payable(address(vault))).deposit{value: SEND_VALUE}();
+        assertEq(sepoliaEthToken.balanceOf(joshua), SEND_VALUE);
+        bridgeTokens(
+            SEND_VALUE,
+            sepoliaEthFork,
+            arbSepoliaFork,
+            sepoliaNetworkDetails,
+            arbSepoliaNetworkDetails,
+            sepoliaEthToken,
+            arbSepoliaToken
+        );
     }
 }
