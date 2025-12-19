@@ -3,7 +3,7 @@ src = "src"
 out = "out"
 libs = ["lib"]
 
-rpc_endpoints = { sepolia-eth="wss://ethereum-sepolia-rpc.publicnode.com", arb-sepolia="wss://arbitrum-sepolia.drpc.org"}
+# rpc_endpoints = { sepolia-eth="wss://ethereum-sepolia-rpc.publicnode.com", arb-sepolia="wss://arbitrum-sepolia.drpc.org", zksync = "https://sepolia.era.zksync.dev"}
 
 remappings = [
     '@openzeppelin/=lib/openzeppelin-contracts/',

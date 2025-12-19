@@ -30,8 +30,11 @@ contract RebaseTokenPool is TokenPool {
         returns (Pool.ReleaseOrMintOutV1 memory)
     {
         _validateReleaseOrMint(releaseOrMintIn);
+        address receiver = releaseOrMintIn.receiver;
         uint256 userInterestRate = abi.decode(releaseOrMintIn.sourcePoolData, (uint256));
-        IRebaseToken(address(i_token)).mint(releaseOrMintIn.receiver, releaseOrMintIn.amount, userInterestRate);
+        // Mint rebasing tokens to the receiver on the destination chain
+        // This will also mint any interest that has accrued since the last time the user's balance was updated.
+        IRebaseToken(address(i_token)).mint(receiver, releaseOrMintIn.amount, userInterestRate);
 
         return Pool.ReleaseOrMintOutV1({destinationAmount: releaseOrMintIn.amount});
     }

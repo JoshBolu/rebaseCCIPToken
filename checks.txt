@@ -1,0 +1,8 @@
+"[(
+    ${SEPOLIA_CHAIN_SELECTOR},
+    true,
+    $(cast abi-encode "f(address)" ${SEPOLIA_POOL_ADDRESS}),
+    $(cast abi-encode "f(address)" ${SEPOLIA_REBASE_TOKEN_ADDRESS}),
+    (false,0,0),
+    (false,0,0)
+)]"
